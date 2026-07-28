@@ -31,8 +31,8 @@
 | モデル | ResNet18 (ImageNet 事前学習) + 最終 fc 層を6クラス用に置換 |
 | オーグメンテーション | RandomHorizontalFlip, RandomRotation(±15°) |
 | 損失/最適化 | CrossEntropyLoss / Adam (lr=1e-3) |
-| 学習 | 10 epochs、**val 精度が最良の時点のモデルを保存**(過学習対策) |
-| デバイス | Apple Silicon GPU (PyTorch MPS) |
+| 学習 | 12 epochs、**val 精度が最良の時点のモデルを保存**(過学習対策) |
+| デバイス | CUDA・MPS(Apple GPU)・CPU を自動選択 — 本実験は Apple Silicon MPS |
 
 ## 4. 結果 — クリーンな test データ
 
@@ -96,6 +96,7 @@ python robustness.py      # ロバスト性テスト → robustness.png
 ```
 
 > データ出典: NEU-CLS (Northeastern University)。上記 curl リンクが使えない場合は Figshare で「NEU-CLS」を検索して取得可能。
+> 学習には乱数性があるため(シード固定でも GPU 演算の特性上)、再学習時の数値は本文と多少異なる場合がある。
 
 ## ファイル構成
 
@@ -111,3 +112,5 @@ confusion_matrix.png / robustness.png   # 結果画像
 
 - データが単一出典(NEU-CLS)のクリーンな撮影画像であり、実際の産業現場の分布とは差がある
 - ロバスト性テストは人為的な劣化シミュレーションであり、実データによる検証は別途必要
+- 同一鋼板を連続撮影した類似画像が、ランダム分割によって train/test の両方に入っている可能性がある(test 100% を押し上げたもう一つの要因になりうる)
+- 「正常(無欠陥)」クラスが存在しないため、どんな画像でも欠陥6種のいずれかに分類してしまう。実際の検査ラインへの投入には、正常クラスの追加または異常検知ステージが前提となる

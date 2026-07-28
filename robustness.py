@@ -6,8 +6,8 @@ from torchvision import datasets, transforms, models
 import matplotlib.pyplot as plt
 
 
-DATA_DIR ="dataset"
-DEVICE = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
+DATA_DIR = "dataset"
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu") # 계산 장치 자동 선택 (NVIDIA GPU → 애플 GPU → CPU 순)
 BATCH_SIZE = 32
 MEAN = [0.485, 0.456, 0.406]
 STD = [0.229, 0.224, 0.225]
@@ -16,11 +16,11 @@ torch.manual_seed(42)
 
 # 테스트할 현장 상황 목록(영문키, 한글설명) - 영문키는 그래프용(한글 폰트 깨짐)
 CONDITIONS = [
-    ("original", "원본(기준"),
+    ("original", "원본(기준)"),
     ("dark", "어두움 - 조명이 약해진 상황"),
     ("bright", "밝음 - 조명이 과한/반사 상황"),
     ("blur", "흐림 - 초점 안 맞거나 렌즈에 먼지"),
-    ("noise", "노이즈 - 저가 센서 * 저조도 촬영 "),
+    ("noise", "노이즈 - 저가 센서·저조도 촬영"),
     ("low_contrast", "대비 낮음 - 뿌옇게 찍힌 상황")
 ]
 
@@ -31,10 +31,10 @@ def make_transform(kind):
 
     if kind == "dark":
         # 밝기 40%로 낮춤
-        steps.append(transforms.ColorJitter(brightness = (0.4, 0.4))) # 대비를 낮추니 뿌옇게 됨.
+        steps.append(transforms.ColorJitter(brightness=(0.4, 0.4))) # (하한, 상한)을 같게 주면 무작위 없이 항상 정확히 0.4배
     elif kind == "bright":
         # 밝기 170%로 올림
-        steps.append(transforms.ColorJitter(brightness=(1.7, 1.7))) # 대비를 1.7배로
+        steps.append(transforms.ColorJitter(brightness=(1.7, 1.7))) # 밝기를 항상 1.7배로 고정 (위와 같은 원리)
     elif kind == "blur":
         # 흐리게
         steps.append(transforms.GaussianBlur(kernel_size=9, sigma=(3.0, 3.0))) # 흐리게 함. (sigma가 클수록 더 흐림)
@@ -49,16 +49,16 @@ def make_transform(kind):
         steps.append(transforms.Lambda( # 내가 만든 임의의 처리를 파이프라인에 끼워넣는 도구
             # torch.clamp : 0.0 - 1.0 범위로 잘라내는 함수 (노이즈 범위 벗어남 방지)
             # torch.randn_like : t와 같은 모양의 무작위 잡음을 만드는 함수
-            lambda t: torch.clamp(t + torch.randn_like(t) * 0.12, 0.0, 1.0 # 
-        )))
+            lambda t: torch.clamp(t + torch.randn_like(t) * 0.12, 0.0, 1.0)
+        ))
     # 정규화 (마지막)
     steps.append(transforms.Normalize(MEAN, STD))
 
     return transforms.Compose(steps)
 
-# 모델 뼈대(train.py와 동일) - 지식 담을 몸통 만듦기.
+# 모델 뼈대(train.py와 동일) - 지식 담을 몸통 만들기.
 def build_model(num_classes):
-    model = models.resnet18(weights=models.ResNet18_Weights.DEFAULT)
+    model = models.resnet18(weights=None) # 뼈대만 필요 (어차피 best_model.pth 가중치로 덮어쓰므로 사전학습 다운로드 불필요)
     model.fc = nn.Linear(model.fc.in_features, num_classes)
     return model.to(DEVICE)
 
@@ -120,7 +120,7 @@ def main():
     
     plt.tight_layout()
     plt.savefig("robustness.png", dpi=150)
-    print("\n 그럼 저장 완료 -> robustness.png")
+    print("\n 그림 저장 완료 -> robustness.png")
 
 if __name__ == "__main__":
     main()

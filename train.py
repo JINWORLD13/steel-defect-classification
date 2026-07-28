@@ -9,11 +9,13 @@ from torchvision import datasets, transforms, models # 이미지 데이터셋/�
 
 DATA_DIR = "dataset" # 데이터가 들어 있는 폴더 이름
 
-DEVICE = torch.device("mps" if torch.backends.mps.is_available() else "cpu") # 계산 장치 지정(gpu냐 cpu)
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu") # 계산 장치 자동 선택 (NVIDIA GPU → 애플 GPU → CPU 순)
 
 BATCH_SIZE = 32
 EPOCHS = 12
 LR = 1e-3 # 0.001을 뜻하는 표기(e는 10의 몇 제곱을 뜻) / 학습률(모델을 한 번에 얼마나 크게 고칠지)
+
+torch.manual_seed(42) # 무작위 요소(가중치 초기화·셔플·증강)를 고정해 재실행해도 비슷한 결과가 나오게 함
 
 MEAN = [0.485, 0.456, 0.406] # 정규화(숫자들의 단위 척도를 맞춤)의 평균 (사전 학습 모델이 쓴 기준)
 STD = [0.229, 0.224, 0.225] # 정규화의 표준편차 (사전 학습 모델이 쓴 기준)
@@ -60,7 +62,7 @@ def train_one_epoch(model, loader, criterion, optimizer):
         outputs = model(images) # 이미지를 모델에 넣어 예측을 계산 (문제 풀기)
 
         # 손실 : 틀린 정도, 낮을 수록 잘한 것
-        loss = criterion(outputs, labels) # 에측과 정답 차이 계산
+        loss = criterion(outputs, labels) # 예측과 정답 차이 계산
 
         loss.backward() # (평가함수에 x) 손실 줄이기 위한 기울기에 대한 역계산
 
@@ -116,7 +118,7 @@ def main():
     model = build_model(num_classes)
 
     # 손실 함수 생성
-    criterion = nn.CrossEntropyLoss() # 다중분류용 표준 손실함수 만드는 함수 - 소프트맥수(점수들을 확률로 바꿈) 내장됨.
+    criterion = nn.CrossEntropyLoss() # 다중분류용 표준 손실함수 만드는 함수 - 소프트맥스(점수들을 확률로 바꿈) 내장됨.
     
     # 옵티마이저 생성(손실과 옵티마이저는 형제)
     # 학습률 lr : 한 걸음 크기 지정
@@ -130,7 +132,7 @@ def main():
         tr_loss, tr_acc = train_one_epoch(model, train_loader, criterion, optimizer)
         val_loss, val_acc = evaluate(model, val_loader, criterion)
         
-        print(f"[{epoch:2d}/{EPOCHS}]" f"train loss {tr_loss:.3f} acc {tr_acc:.3f} | " f"val loss {val_loss:.3f} acc {val_acc:.3f}") # d는 정수 형식. 2d는 정수를 최소 2칸 폭으로 출력하라. f는 소수 형식 .3은 소수점 뒤 3자리
+        print(f"[{epoch:2d}/{EPOCHS}] " f"train loss {tr_loss:.3f} acc {tr_acc:.3f} | " f"val loss {val_loss:.3f} acc {val_acc:.3f}") # d는 정수 형식. 2d는 정수를 최소 2칸 폭으로 출력하라. f는 소수 형식 .3은 소수점 뒤 3자리
         
         if val_acc > best_acc:
             best_acc = val_acc
@@ -138,7 +140,7 @@ def main():
             print(f" best 갱신 -> 저장 (val acc {val_acc:.3f})")
         
     # '저장된 최고의 모델(이게 val과 차이)'을 불러와 test로 최종 평가.
-    model.load_state_dict(torch.load("best_model.pth"))
+    model.load_state_dict(torch.load("best_model.pth", map_location=DEVICE)) # 저장 시 장치와 달라도 지금 장치에 맞게 불러옴
     test_loss, test_acc = evaluate(model, test_loader, criterion) # 현재 최고의 모델로 설정
     print(f"\n=== 최종 테스트 정확도: {test_acc:.3f} ===")
     

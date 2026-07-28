@@ -10,12 +10,12 @@ from sklearn.metrics import confusion_matrix, classification_report, ConfusionMa
 import matplotlib.pyplot as plt # from matplotlib import pyplot as plt
 
 DATA_DIR = "dataset"
-DEVICE = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu") # 계산 장치 자동 선택 (NVIDIA GPU → 애플 GPU → CPU 순)
 BATCH_SIZE = 32
 MEAN = [0.485, 0.456, 0.406]
 STD = [0.229, 0.224, 0.225]
 
-# 학습 때 평가용 전치리(증강 없음)와 동일해야 함.
+# 학습 때 평가용 전처리(증강 없음)와 동일해야 함.
 eval_tf = transforms.Compose([
     transforms.Resize((224, 224)),
     transforms.ToTensor(),
@@ -24,7 +24,7 @@ eval_tf = transforms.Compose([
 
 # 모델 뼈대 만들기
 def build_model(num_classes):
-    model = models.resnet18(weights=models.ResNet18_Weights.DEFAULT)
+    model = models.resnet18(weights=None) # 뼈대만 필요 (어차피 best_model.pth 가중치로 덮어쓰므로 사전학습 다운로드 불필요)
     model.fc = nn.Linear(model.fc.in_features, num_classes)
     return model.to(DEVICE)
 
@@ -47,13 +47,13 @@ def collect_predictions(model, loader):
 
 # 전체 실행
 def main():
-    # train,py의 test와 동일(실전 문제집만 꺼내 컨베이어에 얹음)
+    # train.py의 test와 동일(실전 문제집만 꺼내 컨베이어에 얹음)
     test_ds = datasets.ImageFolder(os.path.join(DATA_DIR, "test"), transform=eval_tf)
     classes = test_ds.classes
     num_classes = len(classes)
     test_loader = DataLoader(test_ds, batch_size=BATCH_SIZE, shuffle=False)
     
-    # 모델 빼대 만들고 최고의 모델 지식(가중치) 불러오기
+    # 모델 뼈대 만들고 최고의 모델 지식(가중치) 불러오기
     model = build_model(num_classes)
     model.load_state_dict(torch.load("best_model.pth", map_location=DEVICE)) # 해당 파일(좌)을 지금 장치(우)에 맞게 불러오기
 

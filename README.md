@@ -30,8 +30,8 @@
 | 모델 | ResNet18 (ImageNet 사전학습) + 마지막 fc층을 6종용으로 교체 |
 | 증강 | RandomHorizontalFlip, RandomRotation(±15°) |
 | 손실/최적화 | CrossEntropyLoss / Adam (lr=1e-3) |
-| 학습 | 10 epochs, **val 정확도 최고 시점 모델 저장**(과적합 방지) |
-| 장치 | Apple Silicon GPU (PyTorch MPS) |
+| 학습 | 12 epochs, **val 정확도 최고 시점 모델 저장**(과적합 방지) |
+| 장치 | CUDA·MPS(Apple GPU)·CPU 자동 선택 — 본 실험은 Apple Silicon MPS |
 
 ## 4. 결과 — 깨끗한 test 데이터
 
@@ -95,6 +95,7 @@ python robustness.py      # 강건성 테스트 → robustness.png
 ```
 
 > 데이터 원본: NEU-CLS (Northeastern University). 위 curl 링크가 막히면 Figshare에서 "NEU-CLS"로 검색해 받을 수 있음.
+> 학습에는 무작위성이 있어(시드를 고정해도 GPU 연산 특성상) 재학습 시 수치가 본문과 조금 다를 수 있음.
 
 ## 파일 구조
 
@@ -110,3 +111,5 @@ confusion_matrix.png / robustness.png   # 결과 이미지
 
 - 데이터가 단일 출처(NEU-CLS)의 깨끗한 촬영본이라 실제 산업 현장 분포와 차이가 있음
 - 강건성 테스트는 인위적 열화 시뮬레이션이므로, 실제 현장 데이터 검증은 별도로 필요함
+- 같은 강판을 연속 촬영한 유사 이미지가 랜덤 분할 탓에 train/test 양쪽에 들어갔을 가능성이 있음 (test 100%를 부풀린 또 하나의 요인일 수 있음)
+- '정상(무결함)' 클래스가 없어 어떤 이미지든 결함 6종 중 하나로 분류함. 실제 검사 라인 투입에는 정상 클래스 추가 또는 이상 탐지 단계가 선행되어야 함
