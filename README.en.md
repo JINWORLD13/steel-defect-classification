@@ -6,8 +6,8 @@ Classifies **6 types of steel surface defects** from manufacturing using transfe
 then asks the question that actually matters — **does lab accuracy survive the factory floor?** — and answers it with a robustness test.
 
 > **TL;DR:** Accuracy was 100% on clean data, but injecting real-world degradations (blur, noise, low contrast)
-> dropped it to 38–53%. In other words, the model is over-fitted to lab conditions, and this project
-> quantifies exactly how much degradation augmentation is needed before field deployment.
+> dropped it to 38–53%. In other words, the model is over-fitted to lab conditions, and this project quantifies
+> exactly how much that costs — establishing the baseline for the degradation-augmented retraining that comes next.
 
 ---
 
@@ -21,9 +21,12 @@ then asks the question that actually matters — **does lab accuracy survive the
 
 - **Source:** NEU-CLS (Northeastern University, CC BY 4.0)
 - **Composition:** 1,800 images, 6 balanced classes (300 each), 200×200
-- **Split:** train 70% / val 15% / test 15% (stratified, class ratios preserved)
-  - ⚠️ The original validation set held only 30 images — far too small to trust. I **re-split the data myself**
-    to make evaluation meaningful (`prepare_data.py`)
+- **Split:** train **1,260** (70%) / val **270** (15%) / test **270** (15%) — stratified, class ratios preserved, fixed `seed 42`
+  - ⚠️ The original ships as train 1,770 / valid 30, so **every single misclassified image swings validation accuracy by 3.3pp**.
+    You cannot pick a best checkpoint off a set like that, so I **re-split the data myself** and grew the validation set
+    **9× (to 270 images)** (`prepare_data.py`)
+  - A `sorted()` call before shuffling removes any dependence on filesystem ordering — fixing the seed without sorting first still breaks reproducibility on another machine
+  - The shuffle happens **within each class**. Shuffling everything at once lets one class pile up in the test split, which makes the per-class report untrustworthy
 
 ## 3. Method
 
@@ -47,15 +50,16 @@ A flawless diagonal → no confusion between classes.
 ## 5. Robustness analysis (the core of this project)
 
 Five image degradations that actually occur on a production line were injected into the test set, and accuracy was re-measured. (`robustness.py`)
+Each intensity is dialed to the point where **a human can still recognize the defect**. If a person can tell the classes apart and the model cannot, that gap is evidence of which cue the model was leaning on.
 
-| Condition | Accuracy | vs. baseline |
-|---|---|---|
-| Original (baseline) | **1.000** | — |
-| Dark (weak lighting) | 0.874 | −12.6pp |
-| Bright (overexposure / reflection) | 0.767 | −23.3pp |
-| Blur (defocus / dust on lens) | 0.530 | −47.0pp |
-| **Noise (cheap sensor)** | **0.385** | **−61.5pp** |
-| Low contrast (hazy capture) | 0.396 | −60.4pp |
+| Condition | Injection | Accuracy | vs. baseline |
+|---|---|---|---|
+| Original (baseline) | — | **1.000** | — |
+| Dark | brightness **×0.4** — weakly lit line | 0.874 | −12.6pp |
+| Bright | brightness **×1.7** — overexposure / metal reflection | 0.767 | −23.3pp |
+| Blur | Gaussian blur **k=9, σ=3.0** — defocus / dust on lens | 0.530 | −47.0pp |
+| **Noise** | Gaussian noise **σ=0.12** — cheap sensor | **0.385** | **−61.5pp** |
+| Low contrast | contrast **×0.3** — hazy capture | 0.396 | −60.4pp |
 
 ![Robustness](robustness.png)
 
@@ -67,7 +71,11 @@ Five image degradations that actually occur on a production line were injected i
 ## 6. What I learned
 
 - **High accuracy ≠ a good model.** The 100% reflected an easy dataset; the robustness test exposed the real weakness.
-- **I hit a "silent bug" firsthand.** A typo in a condition key (`low_contrast`) made the contrast test run on unmodified images and pass at a **fake 100%**. I found and fixed it. Bugs that raise no error and only corrupt the result are the most dangerous kind.
+- **I hit a "silent bug" firsthand.** The keys in `CONDITIONS` and the branch names in `make_transform()` had drifted apart, so **untouched originals were being evaluated with no transform applied at all**. Python raised nothing — the result wasn't wrong, it just *looked good*. Bugs that raise no error and only corrupt the result are the most dangerous kind, and what caught this one was not a debugger but the suspicion "why is this number like that?"
+- **You have to make it visible to catch it.** I changed the script to print each condition's result and its drop against the baseline on its own line, so a condition that sailed through untransformed stands out immediately.
+- **Order of transforms decides what you are measuring.** Brightness, contrast, and blur belong in the PIL stage; noise has to be added after `ToTensor()` (on the 0–1 range) for the σ value to mean anything fixed. Drop the `clamp(0,1)` and you are measuring **normalization distortion**, not noise. `Normalize` always goes last.
+- **Peeking at test during training defeats the point.** Even if the code never trains on test, **I end up choosing hyperparameters by looking at the test score** — and at that moment test is no longer unseen data.
+- **A fixed seed alone is not reproducibility.** Sorting, splitting, noise, and training seeds all have to be pinned together before the same command yields the same result.
 - **Evaluation design comes first.** Refusing to reuse the original's inadequate validation split was the precondition for any trustworthy number.
 
 ## 7. Next steps
@@ -103,7 +111,7 @@ python robustness.py      # robustness test → robustness.png
 
 ```
 prepare_data.py   # NEU-CLS → classification folder layout + stratified 3-way split
-train.py          # ResNet18 transfer learning
+train.py          # ResNet18 transfer learning (MPS)
 analyze.py        # confusion matrix · per-class precision/recall
 robustness.py     # robustness measurement under 5 image degradations
 confusion_matrix.png / robustness.png   # result figures
@@ -112,6 +120,6 @@ confusion_matrix.png / robustness.png   # result figures
 ## Limitations
 
 - The data comes from a single source (NEU-CLS) of clean lab captures, which differs from a real industrial distribution
-- The robustness test uses artificial degradation simulation; validation on real field data is still required
-- Near-duplicate frames of the same steel plate may have landed in both train and test due to random splitting (possibly another factor inflating the 100% test accuracy)
+- The robustness test uses **artificial degradation simulation** and applies **one condition at a time**; a real line is a **compound condition** — dim *and* out of focus at once — so validation on real field data is still required
+- **File-level leakage was ruled out**, but near-duplicate frames of the same steel plate may still have landed in both train and test due to random splitting (possibly another factor inflating the 100% test accuracy)
 - There is no "normal / defect-free" class, so any image is forced into one of the 6 defect types. Real inspection-line deployment requires adding a normal class or an anomaly-detection stage first
