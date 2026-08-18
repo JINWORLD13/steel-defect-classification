@@ -31,6 +31,14 @@ def class_of(path):
 
 
 def main():
+    # 0) 이전 실행 결과를 통째로 비우고 시작
+    #    안 지우면: 시드나 비율을 바꿔 다시 돌릴 때 예전 분할이 그대로 남아 있고,
+    #    그 위에 새 분할이 덮여 쌓임 -> 같은 이미지가 train과 test에 동시에 존재하게 됨.
+    #    이게 데이터 누수(leakage)이고, 시험 문제를 미리 보고 푼 꼴이라 정확도가 부풀려짐.
+    if os.path.isdir(OUT_DIR):
+        print(f"기존 {OUT_DIR}/ 삭제 후 재생성")
+        shutil.rmtree(OUT_DIR)
+
     # 1) 모든 이미지 경로 수집
     paths = []
     for d in SRC_DIRS:
