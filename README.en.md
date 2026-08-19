@@ -19,7 +19,8 @@ then asks the question that actually matters — **does lab accuracy survive the
 
 ## 2. Data
 
-- **Source:** NEU-CLS (Northeastern University, CC BY 4.0)
+- **Source:** NEU surface defect database (Northeastern University, Song & Yan · CC BY 4.0 as declared by the redistributor)
+  - ⚠️ The download is labelled `NEU-CLS`, but **what it actually ships is detection annotations — one bounding-box file for every one of the 1,800 images.** Classification-only NEU-CLS carries no boxes, so this is effectively a NEU-DET-style release. This project folds those boxes away and solves it as classification, and that fact is the basis of the Limitations below
 - **Composition:** 1,800 images, 6 balanced classes (300 each), 200×200
 - **Split:** train **1,260** (70%) / val **270** (15%) / test **270** (15%) — stratified, class ratios preserved, fixed `seed 42`
   - ⚠️ The original ships as train 1,770 / valid 30, so **every single misclassified image swings validation accuracy by 3.3pp**.
@@ -106,7 +107,7 @@ python robustness.py      # robustness test → robustness.png
 python audit_data.py      # data audit (split leakage · label definition)
 ```
 
-> Data source: NEU-CLS (Northeastern University). If the curl link above is blocked, search Figshare for "NEU-CLS".
+> Data source: NEU surface defect database (Northeastern University). If the curl link above is blocked, search Figshare for "NEU-CLS" — as noted above it is distributed under that name but ships detection annotations.
 > Training involves randomness (GPU arithmetic is non-deterministic even with a fixed seed), so numbers may differ slightly on retraining.
 
 ## Project structure
@@ -122,8 +123,8 @@ confusion_matrix.png / robustness.png   # result figures
 
 ## Limitations
 
-- The data comes from a single source (NEU-CLS) of clean lab captures, which differs from a real industrial distribution
+- The data comes from a single source (NEU) of clean lab captures, which differs from a real industrial distribution
 - The robustness test uses **artificial degradation simulation** and applies **one condition at a time**; a real line is a **compound condition** — dim *and* out of focus at once — so validation on real field data is still required
 - **File-level leakage was ruled out by an md5 check over every image** — **zero** identical files between train and test (the single train↔val pair is a duplicate present in the source dataset itself). Near-duplicate frames of the same steel plate may still have landed in both train and test through random splitting
-- **The label definition itself is loose.** Cross-checked against the detection bounding boxes shipped with the source data (present for all 1,800 images, 4,189 boxes), **123 images (6.8%) carry a defect box of a class other than the one in their filename** — 188 foreign boxes, 4.5% of all boxes. The spread across classes is wide: `scratches` **16.7%**, `pitted_surface` 13.0%, `patches` 9.7%, against **0%** for `inclusion` and `rolled-in_scale`. Counted directly, **23 of the 270 test images (8.5%) have more than one right answer yet were graded against a single label.** So the 100% reflects not just an easy dataset but **a loosely posed problem** — the task needs restating as multi-label classification, or as detection (the figures above are reproducible with `audit_data.py`)
+- **The problem I posed did not match the structure of the data.** That every one of the 1,800 images ships a bounding-box file (4,189 boxes) means the original authors assumed an image can hold several defects of several kinds. And it does: **123 images (6.8%) carry a defect box of a class other than the one in their filename** — 188 foreign boxes, 4.5% of all boxes. The spread across classes is wide: `scratches` **16.7%**, `pitted_surface` 13.0%, `patches` 9.7%, against **0%** for `inclusion` and `rolled-in_scale`. In the test split, **23 of 270 images (8.5%) hold two or more defect types yet were graded against a single label.** The data was not wrong — **I was the one who flattened a detection dataset into single-label classification.** The 100% carries that looseness of framing as much as an easy dataset. The task needs restating as multi-label classification, or as detection (figures reproducible with `audit_data.py`)
 - There is no "normal / defect-free" class, so any image is forced into one of the 6 defect types. Real inspection-line deployment requires adding a normal class or an anomaly-detection stage first
