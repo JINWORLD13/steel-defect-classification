@@ -73,6 +73,7 @@ Each intensity is dialed to the point where **a human can still recognize the de
 - **High accuracy ≠ a good model.** The 100% reflected an easy dataset; the robustness test exposed the real weakness.
 - **I hit a "silent bug" firsthand.** The keys in `CONDITIONS` and the branch names in `make_transform()` had drifted apart, so **untouched originals were being evaluated with no transform applied at all**. Python raised nothing — the result wasn't wrong, it just *looked good*. Bugs that raise no error and only corrupt the result are the most dangerous kind, and what caught this one was not a debugger but the suspicion "why is this number like that?"
 - **You have to make it visible to catch it.** I changed the script to print each condition's result and its drop against the baseline on its own line, so a condition that sailed through untransformed stands out immediately.
+- **A second silent bug — this time in the reproduction script.** `prepare_data.py` overwrote its output folder without ever clearing it, so re-running with a different seed or split ratio left **the previous split in place and stacked the new one on top of it.** Reproduced on a 20-image stand-in, six images ended up in train and test at the same time. What it shared with the first bug is that a single run looks perfectly fine — a reproduction script is not something that has to work once, it is something that **has to give the same answer however many times you run it**.
 - **Order of transforms decides what you are measuring.** Brightness, contrast, and blur belong in the PIL stage; noise has to be added after `ToTensor()` (on the 0–1 range) for the σ value to mean anything fixed. Drop the `clamp(0,1)` and you are measuring **normalization distortion**, not noise. `Normalize` always goes last.
 - **Peeking at test during training defeats the point.** Even if the code never trains on test, **I end up choosing hyperparameters by looking at the test score** — and at that moment test is no longer unseen data.
 - **A fixed seed alone is not reproducibility.** Sorting, splitting, noise, and training seeds all have to be pinned together before the same command yields the same result.
@@ -81,7 +82,7 @@ Each intensity is dialed to the point where **a human can still recognize the de
 ## 7. Next steps
 
 - Retrain with degradations included in augmentation → measure how much robustness recovers
-- Extend to **object detection (YOLO)** to localize defects, not just classify them
+- Extend to **object detection (YOLO)** to localize defects, not just classify them — which is also the principled fix for the multi-label problem above (the labels already exist)
 - Ship a Streamlit/Gradio demo
 
 ---
@@ -102,6 +103,7 @@ python prepare_data.py    # data/ → dataset/, stratified re-split (train/val/t
 python train.py           # training → produces best_model.pth
 python analyze.py         # confusion matrix + per-class report
 python robustness.py      # robustness test → robustness.png
+python audit_data.py      # data audit (split leakage · label definition)
 ```
 
 > Data source: NEU-CLS (Northeastern University). If the curl link above is blocked, search Figshare for "NEU-CLS".
@@ -114,6 +116,7 @@ prepare_data.py   # NEU-CLS → classification folder layout + stratified 3-way 
 train.py          # ResNet18 transfer learning (MPS)
 analyze.py        # confusion matrix · per-class precision/recall
 robustness.py     # robustness measurement under 5 image degradations
+audit_data.py     # split-leakage & label-definition audit (reproduces the Limitations figures)
 confusion_matrix.png / robustness.png   # result figures
 ```
 
@@ -121,5 +124,6 @@ confusion_matrix.png / robustness.png   # result figures
 
 - The data comes from a single source (NEU-CLS) of clean lab captures, which differs from a real industrial distribution
 - The robustness test uses **artificial degradation simulation** and applies **one condition at a time**; a real line is a **compound condition** — dim *and* out of focus at once — so validation on real field data is still required
-- **File-level leakage was ruled out**, but near-duplicate frames of the same steel plate may still have landed in both train and test due to random splitting (possibly another factor inflating the 100% test accuracy)
+- **File-level leakage was ruled out by an md5 check over every image** — **zero** identical files between train and test (the single train↔val pair is a duplicate present in the source dataset itself). Near-duplicate frames of the same steel plate may still have landed in both train and test through random splitting
+- **The label definition itself is loose.** Cross-checked against the detection bounding boxes shipped with the source data (present for all 1,800 images, 4,189 boxes), **123 images (6.8%) carry a defect box of a class other than the one in their filename** — 188 foreign boxes, 4.5% of all boxes. The spread across classes is wide: `scratches` **16.7%**, `pitted_surface` 13.0%, `patches` 9.7%, against **0%** for `inclusion` and `rolled-in_scale`. Counted directly, **23 of the 270 test images (8.5%) have more than one right answer yet were graded against a single label.** So the 100% reflects not just an easy dataset but **a loosely posed problem** — the task needs restating as multi-label classification, or as detection (the figures above are reproducible with `audit_data.py`)
 - There is no "normal / defect-free" class, so any image is forced into one of the 6 defect types. Real inspection-line deployment requires adding a normal class or an anomaly-detection stage first
