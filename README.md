@@ -101,7 +101,9 @@ python prepare_data.py    # data/ → dataset/ 로 재분할 (train/val/test)
 python train.py           # 학습 → best_model.pth 생성
 python analyze.py         # 혼동행렬 + 클래스별 성적표
 python robustness.py      # 강건성 테스트 → robustness.png
-python audit_data.py      # 데이터 감사 (분할 누수 · 라벨 정의)
+python audit_data.py      # 데이터 감사 (분할 누수 · 문제 정의 · 다중결함 그림)
+python audit_neardup.py   # 근접중복 감사 + 의심분 제외 재평가
+python -m pytest tests/ -q  # 회귀 테스트 (분할 누수 · 무변형 열화)
 ```
 
 > 데이터 원본: NEU 표면결함 데이터베이스 (Northeastern University). 위 curl 링크가 막히면 Figshare에서 "NEU-CLS"로 검색해 받을 수 있음 — 앞서 적었듯 그 이름으로 배포되지만 내용물엔 탐지 주석이 들어 있음.
@@ -110,18 +112,25 @@ python audit_data.py      # 데이터 감사 (분할 누수 · 라벨 정의)
 ## 파일 구조
 
 ```
-prepare_data.py   # NEU-CLS를 분류용 폴더 구조 + stratified 3분할
+common.py         # 공용 부품 — 클래스 목록 · 모델 뼈대 · 결과 저장 · 윌슨 신뢰구간
+prepare_data.py   # NEU 원본을 분류용 폴더 구조 + stratified 3분할 (+ splits/ 매니페스트)
 train.py          # ResNet18 전이학습 (MPS)
 analyze.py        # 혼동행렬 · 클래스별 precision/recall
 robustness.py     # 이미지 열화 5종 하에서의 강건성 측정
-audit_data.py     # 분할 누수 · 라벨 정의 감사 (한계 항목 수치 재현)
-confusion_matrix.png / robustness.png   # 결과 이미지
+audit_data.py     # 분할 누수 · 문제 정의 감사 (한계 항목 수치 재현)
+audit_neardup.py  # 근접중복 감사 — md5가 못 잡는 '거의 같은' 이미지 + 부분집합 재평가
+tests/            # 회귀 테스트 — 잡았던 버그(분할 누수 · 무변형 열화)의 재발 방지
+splits/           # 분할 매니페스트(경로+md5) — 어떤 파일이 어느 분할인지의 증거
+results/          # 실험 수치의 JSON 단일 출처 — 문서의 숫자는 전부 여기서 나옴
+figures/          # 결과 이미지 (근접중복 갤러리 · 다중결함 실례)
+confusion_matrix.png / robustness.png   # v1 결과 이미지
+best_model_v1.pth # (로컬 전용, git 미추적) v1 가중치 백업 — v1 수치 재현의 유일한 기준선
 ```
 
 ## 한계
 
 - 데이터가 단일 출처(NEU)의 깨끗한 촬영본이라 실제 산업 현장 분포와 차이가 있음
 - 강건성 테스트는 **인위적 열화 시뮬레이션**이며 **조건을 하나씩만** 걸었음. 현장은 어두우면서 동시에 흐린 **복합 조건**이므로, 실제 현장 데이터 검증은 별도로 필요함
-- **파일 단위 누수는 md5 전수 검사로 배제했음** — train↔test 동일 파일 **0건** (train↔val 1쌍은 원본 데이터셋 자체의 중복). 다만 같은 강판을 연속 촬영한 *유사* 이미지가 랜덤 분할 탓에 train/test 양쪽에 들어갔을 가능성은 남아 있음
+- **파일 단위 누수는 md5 전수 검사로 배제했음** — train↔test 동일 파일 **0건** (train↔val 1쌍은 원본 데이터셋 자체의 중복). 유사 이미지 누수 가능성도 측정했음(`audit_neardup.py`): 32×32 흑백 코사인 유사도로 test 각 장의 최근접 train을 찾으면 r>0.90이 54장 나오지만, 갤러리를 눈으로 확인한 결과 동일 강판의 재촬영이 아니라 **질감·조명이 닮은 서로 다른 판**이었음. 그 54장을 가장 보수적으로 전부 제외해도 나머지 216장 정확도 1.000 (윌슨 95% [0.983, 1.000]) — 이 요인으로 점수가 부풀지 않았음
 - **내가 세운 문제 정의가 데이터 구조와 맞지 않았음.** 1,800장 전부에 바운딩박스(4,189개)가 딸려 있다는 건 원저자가 "한 장에 결함이 여러 개·여러 종류 있을 수 있다"고 전제했다는 뜻임. 실제로 **123장(6.8%)이 파일명 클래스와 다른 종류의 결함 박스를 함께 가지고 있음** — 남의 클래스 박스 188개, 전체 박스의 4.5%. 클래스별 편차도 큼: `scratches` **16.7%**, `pitted_surface` 13.0%, `patches` 9.7%인 반면 `inclusion`·`rolled-in_scale`은 **0%**. test 기준으로는 **270장 중 23장(8.5%)이 결함을 2종 이상 품은 채 단일 라벨로 채점됐음.** 데이터가 틀린 게 아니라 **탐지용 데이터를 단일 라벨 분류로 눌러 담은 쪽이 나였음** — test 100%에는 "데이터가 쉬웠다" 외에 이 문제 설정의 헐거움도 섞여 있음. 다중 라벨 분류나 탐지로 다시 세워야 함 (위 수치는 `audit_data.py`로 재현 가능)
 - '정상(무결함)' 클래스가 없어 어떤 이미지든 결함 6종 중 하나로 분류함. 실제 검사 라인 투입에는 정상 클래스 추가 또는 이상 탐지 단계가 선행되어야 함

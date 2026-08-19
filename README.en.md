@@ -104,7 +104,9 @@ python prepare_data.py    # data/ → dataset/, stratified re-split (train/val/t
 python train.py           # training → produces best_model.pth
 python analyze.py         # confusion matrix + per-class report
 python robustness.py      # robustness test → robustness.png
-python audit_data.py      # data audit (split leakage · label definition)
+python audit_data.py      # data audit (split leakage · problem framing · multi-defect figure)
+python audit_neardup.py   # near-duplicate audit + re-scoring without flagged images
+python -m pytest tests/ -q  # regression tests (split leakage · no-op degradation)
 ```
 
 > Data source: NEU surface defect database (Northeastern University). If the curl link above is blocked, search Figshare for "NEU-CLS" — as noted above it is distributed under that name but ships detection annotations.
@@ -113,18 +115,25 @@ python audit_data.py      # data audit (split leakage · label definition)
 ## Project structure
 
 ```
-prepare_data.py   # NEU-CLS → classification folder layout + stratified 3-way split
+common.py         # shared parts — class list · model skeleton · result store · Wilson interval
+prepare_data.py   # NEU source → classification folder layout + stratified 3-way split (+ splits/ manifests)
 train.py          # ResNet18 transfer learning (MPS)
 analyze.py        # confusion matrix · per-class precision/recall
 robustness.py     # robustness measurement under 5 image degradations
-audit_data.py     # split-leakage & label-definition audit (reproduces the Limitations figures)
-confusion_matrix.png / robustness.png   # result figures
+audit_data.py     # split-leakage & problem-framing audit (reproduces the Limitations figures)
+audit_neardup.py  # near-duplicate audit — what md5 cannot catch + subset re-scoring
+tests/            # regression tests — the bugs we caught (split leakage · no-op degradation) stay caught
+splits/           # split manifests (path+md5) — the evidence of which file went where
+results/          # single JSON source of every reported number
+figures/          # result figures (near-duplicate gallery · multi-defect examples)
+confusion_matrix.png / robustness.png   # v1 result figures
+best_model_v1.pth # (local only, not tracked) v1 weight backup — the only baseline that reproduces v1 numbers
 ```
 
 ## Limitations
 
 - The data comes from a single source (NEU) of clean lab captures, which differs from a real industrial distribution
 - The robustness test uses **artificial degradation simulation** and applies **one condition at a time**; a real line is a **compound condition** — dim *and* out of focus at once — so validation on real field data is still required
-- **File-level leakage was ruled out by an md5 check over every image** — **zero** identical files between train and test (the single train↔val pair is a duplicate present in the source dataset itself). Near-duplicate frames of the same steel plate may still have landed in both train and test through random splitting
+- **File-level leakage was ruled out by an md5 check over every image** — **zero** identical files between train and test (the single train↔val pair is a duplicate present in the source dataset itself). The near-duplicate possibility was then measured too (`audit_neardup.py`): cosine similarity over 32×32 grayscale thumbnails flags 54 test images with a train neighbour at r>0.90, but visual inspection of the gallery shows these are **similar-looking but distinct plates**, not re-shots of the same one. Excluding all 54 — the most conservative cut — the remaining 216 images still score 1.000 (Wilson 95% [0.983, 1.000]), so this factor did not inflate the score
 - **The problem I posed did not match the structure of the data.** That every one of the 1,800 images ships a bounding-box file (4,189 boxes) means the original authors assumed an image can hold several defects of several kinds. And it does: **123 images (6.8%) carry a defect box of a class other than the one in their filename** — 188 foreign boxes, 4.5% of all boxes. The spread across classes is wide: `scratches` **16.7%**, `pitted_surface` 13.0%, `patches` 9.7%, against **0%** for `inclusion` and `rolled-in_scale`. In the test split, **23 of 270 images (8.5%) hold two or more defect types yet were graded against a single label.** The data was not wrong — **I was the one who flattened a detection dataset into single-label classification.** The 100% carries that looseness of framing as much as an easy dataset. The task needs restating as multi-label classification, or as detection (figures reproducible with `audit_data.py`)
 - There is no "normal / defect-free" class, so any image is forced into one of the 6 defect types. Real inspection-line deployment requires adding a normal class or an anomaly-detection stage first

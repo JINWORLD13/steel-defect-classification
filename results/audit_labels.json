@@ -1,0 +1,96 @@
+{
+  "leakage": {
+    "total": 1800,
+    "cross_split_dups": 1,
+    "train_test_dups": 0
+  },
+  "images": 1800,
+  "boxes": 4189,
+  "mixed_images": 123,
+  "foreign_boxes": 188,
+  "mixed_by_class": {
+    "crazing": 5,
+    "inclusion": 0,
+    "patches": 29,
+    "pitted_surface": 39,
+    "rolled-in_scale": 0,
+    "scratches": 50
+  },
+  "mixed_split_distribution": {
+    "train": 76,
+    "val": 24,
+    "test": 23
+  },
+  "mismatch_count_majority": [
+    "patches_168",
+    "patches_176",
+    "patches_187",
+    "pitted_surface_172",
+    "pitted_surface_173",
+    "pitted_surface_174",
+    "pitted_surface_207",
+    "pitted_surface_208",
+    "pitted_surface_210",
+    "pitted_surface_214",
+    "pitted_surface_223",
+    "pitted_surface_261",
+    "pitted_surface_276",
+    "scratches_108",
+    "scratches_109",
+    "scratches_110",
+    "scratches_111",
+    "scratches_130",
+    "scratches_139",
+    "scratches_140",
+    "scratches_141",
+    "scratches_210"
+  ],
+  "mismatch_area_majority": [
+    "scratches_127",
+    "scratches_128",
+    "scratches_129",
+    "scratches_130",
+    "scratches_131",
+    "scratches_222",
+    "scratches_223",
+    "scratches_228"
+  ],
+  "mismatch_both": [
+    "scratches_130"
+  ],
+  "cooccurrence": {
+    "crazing+inclusion": 1,
+    "crazing+patches": 4,
+    "inclusion+patches": 30,
+    "inclusion+pitted_surface": 3,
+    "inclusion+scratches": 49,
+    "patches+pitted_surface": 38,
+    "patches+scratches": 1,
+    "pitted_surface+scratches": 1
+  },
+  "test_mixed_images": [
+    "crazing_20",
+    "patches_195",
+    "patches_199",
+    "patches_210",
+    "patches_227",
+    "pitted_surface_172",
+    "pitted_surface_207",
+    "pitted_surface_210",
+    "pitted_surface_276",
+    "scratches_111",
+    "scratches_127",
+    "scratches_130",
+    "scratches_139",
+    "scratches_141",
+    "scratches_223",
+    "scratches_226",
+    "scratches_229",
+    "scratches_233",
+    "scratches_244",
+    "scratches_290",
+    "scratches_7",
+    "scratches_92",
+    "scratches_94"
+  ]
+}

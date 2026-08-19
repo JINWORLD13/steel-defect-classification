@@ -6,6 +6,7 @@ NEU-CLS 데이터 정리 스크립트
 실행: ./venv/bin/python prepare_data.py
 """
 import glob
+import hashlib
 import os
 import random
 import shutil
@@ -71,7 +72,21 @@ def main():
                 shutil.copy2(src, os.path.join(dst_dir, os.path.basename(src)))
             counts[split][cls] = len(flist)
 
-    # 4) 결과 출력
+    # 4) 분할 매니페스트 저장 — "이 분할에 정확히 이 파일들이 들어갔다"는 증거를 남김
+    #    폴더는 gitignore돼 있어서 GitHub에서는 분할을 확인할 방법이 없음.
+    #    경로+md5를 텍스트로 남기면 누구든 자기가 만든 분할이 원본과 같은지 대조할 수 있음.
+    os.makedirs("splits", exist_ok=True)
+    for split in SPLITS:
+        lines = []
+        for path in sorted(glob.glob(os.path.join(OUT_DIR, split, "*", "*.jpg"))):
+            with open(path, "rb") as f:
+                digest = hashlib.md5(f.read()).hexdigest()  # 파일 내용의 지문
+            lines.append(f"{path}\t{digest}")
+        with open(os.path.join("splits", split + ".txt"), "w") as f:
+            f.write("\n".join(lines) + "\n")
+    print(f"\n매니페스트 저장 -> splits/train.txt, val.txt, test.txt")
+
+    # 5) 결과 출력
     print(f"\n출력 폴더: {OUT_DIR}/")
     for split in SPLITS:
         total = sum(counts[split].values())

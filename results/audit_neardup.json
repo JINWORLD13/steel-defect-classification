@@ -1,0 +1,290 @@
+{
+  "threshold": 0.9,
+  "nearest_median": 0.7359,
+  "nearest_max": 0.9883,
+  "control_same_class_mean": 0.0456,
+  "control_other_class_max": 0.698,
+  "flagged_count": 54,
+  "flagged_pairs": [
+    {
+      "r": 0.9883,
+      "test": "dataset/test/pitted_surface/pitted_surface_299.jpg",
+      "train": "dataset/train/pitted_surface/pitted_surface_194.jpg"
+    },
+    {
+      "r": 0.9873,
+      "test": "dataset/test/pitted_surface/pitted_surface_35.jpg",
+      "train": "dataset/train/pitted_surface/pitted_surface_257.jpg"
+    },
+    {
+      "r": 0.9815,
+      "test": "dataset/test/inclusion/inclusion_246.jpg",
+      "train": "dataset/train/inclusion/inclusion_227.jpg"
+    },
+    {
+      "r": 0.9807,
+      "test": "dataset/test/pitted_surface/pitted_surface_215.jpg",
+      "train": "dataset/train/pitted_surface/pitted_surface_158.jpg"
+    },
+    {
+      "r": 0.9804,
+      "test": "dataset/test/pitted_surface/pitted_surface_49.jpg",
+      "train": "dataset/train/pitted_surface/pitted_surface_157.jpg"
+    },
+    {
+      "r": 0.9793,
+      "test": "dataset/test/pitted_surface/pitted_surface_233.jpg",
+      "train": "dataset/train/pitted_surface/pitted_surface_125.jpg"
+    },
+    {
+      "r": 0.9789,
+      "test": "dataset/test/pitted_surface/pitted_surface_198.jpg",
+      "train": "dataset/train/pitted_surface/pitted_surface_117.jpg"
+    },
+    {
+      "r": 0.9788,
+      "test": "dataset/test/pitted_surface/pitted_surface_222.jpg",
+      "train": "dataset/train/pitted_surface/pitted_surface_107.jpg"
+    },
+    {
+      "r": 0.9764,
+      "test": "dataset/test/pitted_surface/pitted_surface_235.jpg",
+      "train": "dataset/train/inclusion/inclusion_257.jpg"
+    },
+    {
+      "r": 0.9752,
+      "test": "dataset/test/inclusion/inclusion_245.jpg",
+      "train": "dataset/train/pitted_surface/pitted_surface_298.jpg"
+    },
+    {
+      "r": 0.9742,
+      "test": "dataset/test/pitted_surface/pitted_surface_127.jpg",
+      "train": "dataset/train/pitted_surface/pitted_surface_252.jpg"
+    },
+    {
+      "r": 0.9702,
+      "test": "dataset/test/pitted_surface/pitted_surface_137.jpg",
+      "train": "dataset/train/pitted_surface/pitted_surface_195.jpg"
+    },
+    {
+      "r": 0.9698,
+      "test": "dataset/test/pitted_surface/pitted_surface_139.jpg",
+      "train": "dataset/train/pitted_surface/pitted_surface_106.jpg"
+    },
+    {
+      "r": 0.9691,
+      "test": "dataset/test/inclusion/inclusion_239.jpg",
+      "train": "dataset/train/inclusion/inclusion_244.jpg"
+    },
+    {
+      "r": 0.9682,
+      "test": "dataset/test/pitted_surface/pitted_surface_145.jpg",
+      "train": "dataset/train/inclusion/inclusion_243.jpg"
+    },
+    {
+      "r": 0.9617,
+      "test": "dataset/test/pitted_surface/pitted_surface_13.jpg",
+      "train": "dataset/train/inclusion/inclusion_233.jpg"
+    },
+    {
+      "r": 0.9593,
+      "test": "dataset/test/pitted_surface/pitted_surface_29.jpg",
+      "train": "dataset/train/pitted_surface/pitted_surface_199.jpg"
+    },
+    {
+      "r": 0.9584,
+      "test": "dataset/test/pitted_surface/pitted_surface_1.jpg",
+      "train": "dataset/train/pitted_surface/pitted_surface_2.jpg"
+    },
+    {
+      "r": 0.9574,
+      "test": "dataset/test/pitted_surface/pitted_surface_90.jpg",
+      "train": "dataset/train/pitted_surface/pitted_surface_3.jpg"
+    },
+    {
+      "r": 0.9535,
+      "test": "dataset/test/pitted_surface/pitted_surface_204.jpg",
+      "train": "dataset/train/pitted_surface/pitted_surface_11.jpg"
+    },
+    {
+      "r": 0.9531,
+      "test": "dataset/test/inclusion/inclusion_74.jpg",
+      "train": "dataset/train/pitted_surface/pitted_surface_194.jpg"
+    },
+    {
+      "r": 0.9498,
+      "test": "dataset/test/inclusion/inclusion_237.jpg",
+      "train": "dataset/train/pitted_surface/pitted_surface_257.jpg"
+    },
+    {
+      "r": 0.9484,
+      "test": "dataset/test/pitted_surface/pitted_surface_6.jpg",
+      "train": "dataset/train/pitted_surface/pitted_surface_5.jpg"
+    },
+    {
+      "r": 0.9482,
+      "test": "dataset/test/inclusion/inclusion_76.jpg",
+      "train": "dataset/train/pitted_surface/pitted_surface_107.jpg"
+    },
+    {
+      "r": 0.9427,
+      "test": "dataset/test/inclusion/inclusion_78.jpg",
+      "train": "dataset/train/pitted_surface/pitted_surface_224.jpg"
+    },
+    {
+      "r": 0.9421,
+      "test": "dataset/test/pitted_surface/pitted_surface_87.jpg",
+      "train": "dataset/train/pitted_surface/pitted_surface_68.jpg"
+    },
+    {
+      "r": 0.9417,
+      "test": "dataset/test/crazing/crazing_85.jpg",
+      "train": "dataset/train/pitted_surface/pitted_surface_285.jpg"
+    },
+    {
+      "r": 0.9409,
+      "test": "dataset/test/pitted_surface/pitted_surface_196.jpg",
+      "train": "dataset/train/pitted_surface/pitted_surface_191.jpg"
+    },
+    {
+      "r": 0.9401,
+      "test": "dataset/test/pitted_surface/pitted_surface_124.jpg",
+      "train": "dataset/train/pitted_surface/pitted_surface_46.jpg"
+    },
+    {
+      "r": 0.9397,
+      "test": "dataset/test/pitted_surface/pitted_surface_154.jpg",
+      "train": "dataset/train/inclusion/inclusion_244.jpg"
+    },
+    {
+      "r": 0.9385,
+      "test": "dataset/test/pitted_surface/pitted_surface_74.jpg",
+      "train": "dataset/train/inclusion/inclusion_138.jpg"
+    },
+    {
+      "r": 0.9364,
+      "test": "dataset/test/pitted_surface/pitted_surface_238.jpg",
+      "train": "dataset/train/inclusion/inclusion_227.jpg"
+    },
+    {
+      "r": 0.9356,
+      "test": "dataset/test/crazing/crazing_102.jpg",
+      "train": "dataset/train/pitted_surface/pitted_surface_285.jpg"
+    },
+    {
+      "r": 0.9351,
+      "test": "dataset/test/scratches/scratches_112.jpg",
+      "train": "dataset/train/scratches/scratches_39.jpg"
+    },
+    {
+      "r": 0.9348,
+      "test": "dataset/test/crazing/crazing_276.jpg",
+      "train": "dataset/train/crazing/crazing_68.jpg"
+    },
+    {
+      "r": 0.9334,
+      "test": "dataset/test/crazing/crazing_44.jpg",
+      "train": "dataset/train/crazing/crazing_68.jpg"
+    },
+    {
+      "r": 0.9317,
+      "test": "dataset/test/crazing/crazing_38.jpg",
+      "train": "dataset/train/pitted_surface/pitted_surface_285.jpg"
+    },
+    {
+      "r": 0.9266,
+      "test": "dataset/test/inclusion/inclusion_128.jpg",
+      "train": "dataset/train/inclusion/inclusion_127.jpg"
+    },
+    {
+      "r": 0.9248,
+      "test": "dataset/test/inclusion/inclusion_131.jpg",
+      "train": "dataset/train/inclusion/inclusion_281.jpg"
+    },
+    {
+      "r": 0.9244,
+      "test": "dataset/test/crazing/crazing_110.jpg",
+      "train": "dataset/train/pitted_surface/pitted_surface_21.jpg"
+    },
+    {
+      "r": 0.9238,
+      "test": "dataset/test/inclusion/inclusion_58.jpg",
+      "train": "dataset/train/pitted_surface/pitted_surface_69.jpg"
+    },
+    {
+      "r": 0.9237,
+      "test": "dataset/test/inclusion/inclusion_87.jpg",
+      "train": "dataset/train/pitted_surface/pitted_surface_112.jpg"
+    },
+    {
+      "r": 0.9222,
+      "test": "dataset/test/pitted_surface/pitted_surface_286.jpg",
+      "train": "dataset/train/inclusion/inclusion_257.jpg"
+    },
+    {
+      "r": 0.9221,
+      "test": "dataset/test/crazing/crazing_142.jpg",
+      "train": "dataset/train/inclusion/inclusion_249.jpg"
+    },
+    {
+      "r": 0.9219,
+      "test": "dataset/test/crazing/crazing_111.jpg",
+      "train": "dataset/train/pitted_surface/pitted_surface_194.jpg"
+    },
+    {
+      "r": 0.9215,
+      "test": "dataset/test/inclusion/inclusion_126.jpg",
+      "train": "dataset/train/inclusion/inclusion_273.jpg"
+    },
+    {
+      "r": 0.919,
+      "test": "dataset/test/inclusion/inclusion_194.jpg",
+      "train": "dataset/train/pitted_surface/pitted_surface_152.jpg"
+    },
+    {
+      "r": 0.9157,
+      "test": "dataset/test/pitted_surface/pitted_surface_18.jpg",
+      "train": "dataset/train/inclusion/inclusion_240.jpg"
+    },
+    {
+      "r": 0.9157,
+      "test": "dataset/test/inclusion/inclusion_294.jpg",
+      "train": "dataset/train/inclusion/inclusion_273.jpg"
+    },
+    {
+      "r": 0.9133,
+      "test": "dataset/test/pitted_surface/pitted_surface_93.jpg",
+      "train": "dataset/train/inclusion/inclusion_225.jpg"
+    },
+    {
+      "r": 0.9121,
+      "test": "dataset/test/inclusion/inclusion_137.jpg",
+      "train": "dataset/train/pitted_surface/pitted_surface_2.jpg"
+    },
+    {
+      "r": 0.9057,
+      "test": "dataset/test/inclusion/inclusion_53.jpg",
+      "train": "dataset/train/inclusion/inclusion_225.jpg"
+    },
+    {
+      "r": 0.9018,
+      "test": "dataset/test/crazing/crazing_294.jpg",
+      "train": "dataset/train/pitted_surface/pitted_surface_107.jpg"
+    },
+    {
+      "r": 0.9008,
+      "test": "dataset/test/scratches/scratches_127.jpg",
+      "train": "dataset/train/scratches/scratches_150.jpg"
+    }
+  ],
+  "acc_full_test": 1.0,
+  "acc_without_flagged": 1.0,
+  "wilson_full": [
+    0.986,
+    1.0
+  ],
+  "wilson_without_flagged": [
+    0.9825,
+    1.0
+  ]
+}

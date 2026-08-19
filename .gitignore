@@ -5,9 +5,11 @@ venv/
 NEU-CLS.zip
 data/
 dataset/
+dataset_det/
 
-# 학습된 모델 가중치 (43MB, 재학습 가능하므로 제외)
-best_model.pth
+# 학습된 모델 가중치 전부 (재학습 가능하므로 제외)
+# best_model_v1.pth는 v1 결과의 유일한 기준선 — git엔 안 올리지만 로컬에서 절대 지우지 말 것
+*.pth
 
 # 파이썬 캐시
 __pycache__/
@@ -19,5 +21,6 @@ __pycache__/
 # 임시 테스트 파일
 mps.py
 
-# 개인 공부 노트 — 공개 저장소에 올리지 않음
+# 개인 공부 노트 · 면접 준비 — 공개 저장소에 올리지 않음
 STUDY.md
+INTERVIEW.md
