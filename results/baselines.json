@@ -1,0 +1,18 @@
+{
+  "chance": 0.1667,
+  "handcrafted_logreg": 0.9333,
+  "handcrafted_wilson": [
+    0.8971,
+    0.9574
+  ],
+  "resnet18_v1": 1.0,
+  "features": [
+    "mean",
+    "std",
+    "|gx|mean",
+    "|gy|mean",
+    "grad_std",
+    "edge_frac(>30)",
+    "anisotropy"
+  ]
+}

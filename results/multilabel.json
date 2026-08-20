@@ -1,0 +1,22 @@
+{
+  "multilabel": {
+    "subset": 0.9259,
+    "wilson": [
+      0.8884,
+      0.9515
+    ],
+    "jaccard": 0.9556,
+    "missed_pairs": 18
+  },
+  "v1_as_multilabel": {
+    "subset": 0.9148,
+    "wilson": [
+      0.8754,
+      0.9426
+    ],
+    "jaccard": 0.9574,
+    "missed_pairs": 23
+  },
+  "single_label_ceiling": 0.9148,
+  "multi_defect_test_images": 23
+}
