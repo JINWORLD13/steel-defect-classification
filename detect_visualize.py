@@ -84,6 +84,33 @@ def main():
     plt.savefig("figures/08_det_metrics.png", dpi=150)
     print("그림 저장 -> figures/08_det_metrics.png")
 
+    # ---- 그림 09: val 문턱 훑기 곡선 + test 최종점 ----------------------
+    # "문턱은 val에서 골랐고 test는 그 값 하나로 한 번만 봤다"를 그림 한 장으로
+    val = load_result("detection_val")
+    det = load_result("detection")
+    ts = [s["threshold"] for s in val["sweep"]]
+    plt.figure(figsize=(7, 4.5))
+    plt.plot(ts, [s["miss"] for s in val["sweep"]], "o-", color="crimson",
+             label="miss rate (val sweep)")
+    plt.plot(ts, [s["false_alarms_per_image"] for s in val["sweep"]], "s--",
+             color="steelblue", label="false alarms / image (val sweep)")
+    op = det["operating_point"]
+    plt.axvline(op["threshold"], color="gray", linestyle=":")
+    plt.scatter([op["threshold"]], [op["miss_rate"]], marker="*", s=180,
+                color="crimson", zorder=5,
+                label=f"TEST (once): miss {op['miss_rate']:.1%}")
+    plt.scatter([op["threshold"]], [op["false_alarms_per_image"]], marker="*",
+                s=180, color="steelblue",
+                label=f"TEST (once): {op['false_alarms_per_image']:.2f} FA/img")
+    plt.axhline(0.05, color="black", linewidth=0.8, linestyle="--")
+    plt.text(ts[0], 0.055, "miss 5% target", fontsize=8)
+    plt.xlabel("score threshold")
+    plt.title("Operating point chosen on val, spent once on test")
+    plt.legend(fontsize=8)
+    plt.tight_layout()
+    plt.savefig("figures/09_det_threshold_val_test.png", dpi=150)
+    print("그림 저장 -> figures/09_det_threshold_val_test.png")
+
     # ---- 그림 10: 성공 3 + 실패 3 --------------------------------------
     stats = [match_stats(r, args.threshold) for r in records]
     fail_order = sorted(range(len(records)),

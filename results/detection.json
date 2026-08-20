@@ -1,0 +1,44 @@
+{
+  "map50": 0.734,
+  "map5095": 0.3496,
+  "map50_manual_macro": 0.737,
+  "ap50_manual": {
+    "crazing": 0.4068,
+    "inclusion": 0.7742,
+    "patches": 0.8696,
+    "pitted_surface": 0.7335,
+    "rolled-in_scale": 0.7294,
+    "scratches": 0.9085
+  },
+  "bootstrap_ci95": {
+    "crazing": [
+      0.2814,
+      0.5347
+    ],
+    "inclusion": [
+      0.7026,
+      0.8459
+    ],
+    "patches": [
+      0.8116,
+      0.9331
+    ],
+    "pitted_surface": [
+      0.5996,
+      0.8749
+    ],
+    "rolled-in_scale": [
+      0.622,
+      0.8304
+    ],
+    "scratches": [
+      0.8566,
+      0.9593
+    ]
+  },
+  "operating_point": {
+    "threshold": 0.45,
+    "miss_rate": 0.1938,
+    "false_alarms_per_image": 1.87
+  }
+}

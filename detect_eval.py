@@ -140,15 +140,16 @@ def main():
     m = metric.compute()
     print(f"\nmAP@50 {float(m['map_50']):.4f} | mAP@50-95 {float(m['map']):.4f}")
 
-    manual, lib = {}, {}
-    classes_idx = m["classes"].tolist() if m["classes"].ndim else [int(m["classes"])]
-    for k, cls in enumerate(classes_idx):
-        lib[CLASSES[cls - 1]] = float(m["map_50_per_class"][k]) if m["map_50_per_class"].ndim else float(m["map_50_per_class"])
-    print(f"{'class':18s} {'AP@50(lib)':>10s} {'AP@50(손)':>10s}")
+    # 교차검증: 라이브러리의 mAP@50 은 클래스별 AP@50 의 평균임 —
+    # 손으로 구현한 클래스별 AP의 평균과 소수 셋째 자리까지 일치해야 구현이 맞음
+    manual = {}
+    print(f"{'class':18s} {'AP@50(손)':>10s}")
     for cls in range(1, 7):
         manual[CLASSES[cls - 1]] = ap50_per_class(records, cls)
-        print(f"{CLASSES[cls - 1]:18s} {lib.get(CLASSES[cls - 1], float('nan')):10.4f} "
-              f"{manual[CLASSES[cls - 1]]:10.4f}")
+        print(f"{CLASSES[cls - 1]:18s} {manual[CLASSES[cls - 1]]:10.4f}")
+    manual_macro = sum(manual.values()) / len(manual)
+    print(f"손 구현 평균 {manual_macro:.4f} vs torchmetrics {float(m['map_50']):.4f} "
+          f"(차이 {abs(manual_macro - float(m['map_50'])):.4f})")
 
     # ---- 부트스트랩 CI (이미지 단위 복원추출 500회) --------------------
     rng = np.random.default_rng(0)
@@ -185,7 +186,7 @@ def main():
               f"미검출 {miss:.1%} | 헛경보 {fa:.2f}건/장")
         save_result("detection", {
             "map50": round(float(m["map_50"]), 4), "map5095": round(float(m["map"]), 4),
-            "ap50_lib": {k: round(v, 4) for k, v in lib.items()},
+            "map50_manual_macro": round(sum(manual.values()) / len(manual), 4),
             "ap50_manual": {k: round(v, 4) for k, v in manual.items()},
             "bootstrap_ci95": ci,
             "operating_point": {"threshold": args.threshold,

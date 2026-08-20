@@ -1,139 +1,150 @@
-# Steel Surface Defect Classification (NEU-CLS) + Robustness Analysis
+# Steel Surface Defect Inspection — interrogating a 100%, fixing it, and reposing the problem
 
 [🇰🇷 한국어](README.md) | [🇯🇵 日本語](README.ja.md) | 🇺🇸 English
 
-Classifies **6 types of steel surface defects** from manufacturing using transfer learning (ResNet18),
-then asks the question that actually matters — **does lab accuracy survive the factory floor?** — and answers it with a robustness test.
+A transfer-learning classifier scored **1.000 accuracy** on a clean test set. Instead of celebrating that number, this repository **interrogates it (Act 1), explains why it collapses (Act 2), actually fixes it (Act 3), and re-poses the problem itself (Act 4).**
 
-> **TL;DR:** Accuracy was 100% on clean data, but injecting real-world degradations (blur, noise, low contrast)
-> dropped it to 38–53%. In other words, the model is over-fitted to lab conditions, and this project quantifies
-> exactly how much that costs — establishing the baseline for the degradation-augmented retraining that comes next.
+> **Four-line TL;DR:**
+> ① All four suspects behind a 100% (leakage / easy task / small eval set / loose grading) were measured — leakage dismissed, "easy" and "loosely posed" confirmed
+> ② Degradation-augmented retraining improves **all 6 held-out corruptions the model never trained on** (up to +36.5pp) — at a real cost: clean 1.000→0.967 (McNemar p=0.004)
+> ③ Grad-CAM implemented from scratch and verified, turning the "edge reliance" hunch into numbers — what collapses under corruption is not saliency focus but its **existence** (dead-CAM rate 0→29%)
+> ④ Multi-label and detection on the same backbone recover what single-label **could not express in principle** (multiple defects, location, count)
 
 ---
 
-## 1. Problem
+## Act 1 · Discovery — "what was the 1.000?"
 
-- **Goal:** an automatic surface-defect classifier to replace manual visual inspection
-- **6 target classes:** crazing, inclusion, patches, pitted_surface, rolled-in_scale, scratches
-- **Approach:** fine-tune a pretrained ResNet18 via transfer learning
+A clean-test 100% has exactly four possible causes. All four were measured. (Details: [docs/01-data-audit.md](docs/01-data-audit.md))
 
-## 2. Data
+| Suspect | Method | Verdict |
+|---|---|---|
+| Data leakage | md5 sweep + 32×32 cosine near-duplicate audit | **Dismissed** — zero identical files. Dropping all 54 images with r>0.90 (visually: similar-looking but *distinct* plates) still gives 1.000 [0.983, 1.000] |
+| Small eval set | Wilson interval | **Conditional** — the honest reading of 1.000 is "**at least 0.986**" (n=270) |
+| Easy task | **7 handcrafted texture statistics** + logistic regression | **Confirmed** — **0.933** [0.897, 0.957] with no deep learning |
+| Loose grading | Cross-check against the shipped bounding boxes | **Confirmed** — below |
 
-- **Source:** NEU surface defect database (Northeastern University, Song & Yan · CC BY 4.0 as declared by the redistributor)
-  - ⚠️ The download is labelled `NEU-CLS`, but **what it actually ships is detection annotations — one bounding-box file for every one of the 1,800 images.** Classification-only NEU-CLS carries no boxes, so this is effectively a NEU-DET-style release. This project folds those boxes away and solves it as classification, and that fact is the basis of the Limitations below
-- **Composition:** 1,800 images, 6 balanced classes (300 each), 200×200
-- **Split:** train **1,260** (70%) / val **270** (15%) / test **270** (15%) — stratified, class ratios preserved, fixed `seed 42`
-  - ⚠️ The original ships as train 1,770 / valid 30, so **every single misclassified image swings validation accuracy by 3.3pp**.
-    You cannot pick a best checkpoint off a set like that, so I **re-split the data myself** and grew the validation set
-    **9× (to 270 images)** (`prepare_data.py`)
-  - A `sorted()` call before shuffling removes any dependence on filesystem ordering — fixing the seed without sorting first still breaks reproducibility on another machine
-  - The shuffle happens **within each class**. Shuffling everything at once lets one class pile up in the test split, which makes the per-class report untrustworthy
+**The loose-grading evidence:** the archive is distributed as `NEU-CLS` but ships detection boxes for all 1,800 images (4,189 boxes — effectively **NEU-DET**). **123 images (6.8%)** carry a defect box of another class than their filename; in the test split, **23 of 270 (8.5%) have more than one right answer yet were graded against a single label.** Even "the representative defect" is criterion-dependent (filename disagrees with the count-majority on 22 images, with the area-majority on 8, intersection 1). The data was not wrong — **my flattening of a detection dataset into single-label classification was.** This finding is the reason Act 4 exists. (Fully reproducible: `audit_data.py`, `audit_neardup.py`, `baseline_handcrafted.py`)
 
-## 3. Method
+![Baseline ladder](figures/03_baseline_ladder.png)
 
-| Item | Detail |
-|---|---|
-| Model | ResNet18 (ImageNet pretrained), final fc layer replaced for 6 classes |
-| Augmentation | RandomHorizontalFlip, RandomRotation(±15°) |
-| Loss / Optimizer | CrossEntropyLoss / Adam (lr=1e-3) |
-| Training | 12 epochs, **checkpoint saved at best val accuracy** (guards against overfitting) |
-| Device | Auto-selects CUDA / MPS (Apple GPU) / CPU — this run used Apple Silicon MPS |
+## Act 2 · Explanation — "why and how does it collapse?"
 
-## 4. Results — clean test set
+The v1 five-bar robustness test was rebuilt into an **11-corruption × 5-severity ladder** (`corruptions.py`). Families usable for training and the 6 held-out corruptions (near/mid/far) are **physically separated by an import-time assert**; ladder intensities were calibrated on val and frozen — test is seen once per model. (Details: [docs/02-robustness.md](docs/02-robustness.md))
 
-**100% test accuracy** (270 images, precision and recall both 1.000 for every class)
+v1 baseline (test, mean over severities): **clean 1.000 / seen 0.614 / near 0.643 / mid 0.565 / far 0.863**
 
-![Confusion Matrix](confusion_matrix.png)
+The v1 hunch "it relies on sharp texture" was tested with a **from-scratch Grad-CAM** (`gradcam.py`, self-verified via the GAP∘fc identity, max diff 1.2e-07). Because boxes exist, saliency is *scored*, not eyeballed: (Details: [docs/03-explainability.md](docs/03-explainability.md))
 
-A flawless diagonal → no confusion between classes.
-**Rather than taking this "too perfect" result at face value**, I measured the model's real capability with the robustness test below.
+- 6-rung baseline battery: uniform 1.00 → center prior 1.19 → **pure edge energy 1.36** → trained model **1.47** (ADR). It beats everything — but **the thin margin over edges is itself quantitative evidence of edge reliance**. The pointing game margin is wide (0.52→**0.81**)
+- Deletion test passed — deleting top-CAM cells collapses accuracy faster than random deletion everywhere (faithfulness)
+- Under corruption, surviving heatmaps stay focused (ADR ≈ 1.5); what collapses is heatmap **existence** — dead rate 0% → 20–29%
 
-## 5. Robustness analysis (the core of this project)
+![CAM baselines](figures/06_cam_baselines.png)
 
-Five image degradations that actually occur on a production line were injected into the test set, and accuracy was re-measured. (`robustness.py`)
-Each intensity is dialed to the point where **a human can still recognize the defect**. If a person can tell the classes apart and the model cannot, that gap is evidence of which cue the model was leaning on.
+## Act 3 · Fix — "fixed it, and verified the claim of fixing"
 
-| Condition | Injection | Accuracy | vs. baseline |
+Retraining adds 4 corruption families (noise, blur, brightness, contrast) drawn from **continuous ranges** (`train_robust.py`, 5 seeds). Evaluation presets are never reused; held-out families are blocked in code. The primary seed is chosen **by val score only** — the seed with the best clean test accuracy was *not* selected.
+
+| Zone (test, severity mean) | v1 | v2 | seed range |
 |---|---|---|---|
-| Original (baseline) | — | **1.000** | — |
-| Dark | brightness **×0.4** — weakly lit line | 0.874 | −12.6pp |
-| Bright | brightness **×1.7** — overexposure / metal reflection | 0.767 | −23.3pp |
-| Blur | Gaussian blur **k=9, σ=3.0** — defocus / dust on lens | 0.530 | −47.0pp |
-| **Noise** | Gaussian noise **σ=0.12** — cheap sensor | **0.385** | **−61.5pp** |
-| Low contrast | contrast **×0.3** — hazy capture | 0.396 | −60.4pp |
+| clean | 1.000 | 0.967 | 0.967–0.993 |
+| seen — trained mechanisms, expected to rise | 0.614 | **0.894** | 0.886–0.895 |
+| **held-out near** | 0.643 | **0.899** | 0.835–0.905 |
+| **held-out mid** | 0.565 | **0.738** | 0.653–0.741 |
+| **held-out far** — jpeg/pixelate, no cousin trained | 0.863 | **0.906** | 0.778–0.906 |
 
-![Robustness](robustness.png)
+**All 6 held-out corruptions improved**: speckle +0.365 · salt_pepper +0.264 · motion_blur +0.147 · gamma +0.081 · jpeg +0.047 · pixelate +0.040
 
-**Interpretation:**
-- The model holds up reasonably well against lighting changes, but is **fragile against noise, low contrast, and blur** (up to −61.5pp)
-- Why: the training data is clean lab photography, so the model appears to have learned to **rely on sharp texture**
-- Conclusion: **retraining with noise, blur, and contrast augmentation is mandatory** before field deployment
+**The honest cost:** clean 1.000 → 0.967. Same 270 images, paired comparison → **McNemar's exact test**: 9 images only v1 got right, 0 only v2, **p = 0.004**. The drop is a real price of robustness, not noise.
 
-## 6. What I learned
+![Before/after](figures/05_robustness_before_after.png)
 
-- **High accuracy ≠ a good model.** The 100% reflected an easy dataset; the robustness test exposed the real weakness.
-- **I hit a "silent bug" firsthand.** The keys in `CONDITIONS` and the branch names in `make_transform()` had drifted apart, so **untouched originals were being evaluated with no transform applied at all**. Python raised nothing — the result wasn't wrong, it just *looked good*. Bugs that raise no error and only corrupt the result are the most dangerous kind, and what caught this one was not a debugger but the suspicion "why is this number like that?"
-- **You have to make it visible to catch it.** I changed the script to print each condition's result and its drop against the baseline on its own line, so a condition that sailed through untransformed stands out immediately.
-- **A second silent bug — this time in the reproduction script.** `prepare_data.py` overwrote its output folder without ever clearing it, so re-running with a different seed or split ratio left **the previous split in place and stacked the new one on top of it.** Reproduced on a 20-image stand-in, six images ended up in train and test at the same time. What it shared with the first bug is that a single run looks perfectly fine — a reproduction script is not something that has to work once, it is something that **has to give the same answer however many times you run it**.
-- **Order of transforms decides what you are measuring.** Brightness, contrast, and blur belong in the PIL stage; noise has to be added after `ToTensor()` (on the 0–1 range) for the σ value to mean anything fixed. Drop the `clamp(0,1)` and you are measuring **normalization distortion**, not noise. `Normalize` always goes last.
-- **Peeking at test during training defeats the point.** Even if the code never trains on test, **I end up choosing hyperparameters by looking at the test score** — and at that moment test is no longer unseen data.
-- **A fixed seed alone is not reproducibility.** Sorting, splitting, noise, and training seeds all have to be pinned together before the same command yields the same result.
-- **Evaluation design comes first.** Refusing to reuse the original's inadequate validation split was the precondition for any trustworthy number.
+## Act 4 · Reposing — "what single-label could never do"
 
-## 7. Next steps
+Act 1's finding (23 multi-defect test images) is resolved at the problem-definition level. All three models share **the same ResNet18 backbone and the same 270 test images**.
 
-- Retrain with degradations included in augmentation → measure how much robustness recovers
-- Extend to **object detection (YOLO)** to localize defects, not just classify them — which is also the principled fix for the multi-label problem above (the labels already exist)
-- Ship a Streamlit/Gradio demo
+| Model | Grading (box multi-hot) | Result |
+|---|---|---|
+| Single-label v1 (argmax) | subset accuracy | 0.915 — **exactly at its structural ceiling** (23 multi-defect images are unwinnable in principle) |
+| Multi-label (BCE, a 20-line change) | subset accuracy | **0.926** — ceiling broken; missed defect pairs 23→18 |
+| Detection (Faster R-CNN) | mAP@50 / operating point | **0.734** (mAP@50-95 0.350, per-class 0.41–0.91) / miss 19.4% · 1.87 false alarms/image (threshold 0.45, **chosen on val**) |
 
----
+The detection design was justified without training (`anchor_recall.py`): default anchor ratios catch only **16.3%** of the thin, elongated scratches boxes → adding ratios 0.1/10 raises it to **92.8%** (overall 84.6→97.4). Device is CPU — MPS detection, measured *after* `synchronize()`, was hundreds of times slower (without sync you only time kernel queueing). The 50-image memorization gate (mAP@50 ≥ 0.9) came in at 0.667 — below the bar; the trajectory (0.04→0.67) confirmed the pipeline works and we proceeded, recording the miss. (Details: [docs/04-detection.md](docs/04-detection.md))
+
+![Detection](figures/08_det_metrics.png)
+
+## What I learned (v1 + v2)
+
+- **A 100% is not a conclusion but the start of an interrogation.** Verification means measuring each of the four candidate causes.
+- **Two silent bugs caught and pinned by regression tests.** ① a condition-key mismatch evaluated untransformed originals ② re-splitting stacked new splits on old ones, leaking train/test — both "look fine on the first run". Four pytest cases keep them out.
+- **Boundaries are enforced by code, not prose.** Held-out violations die on an assert; the split's evidence lives in manifests; every reported number lives in `results/*.json`.
+- **Reproducibility traps:** Python's `hash()` differs per process (replaced with crc32), unsorted shuffles depend on the OS, and GPU training does not reproduce exactly even when seeded (a frozen weight backup is the answer key).
+- **Statistics must match the design:** McNemar for paired comparisons, Wilson for proportions. No accuracy without an n.
+- **Metrics need their own baselines:** ADR's random line is not 1.0 but the center prior's 1.19. A number without a baseline is not a claim.
+- **Negative results are results:** TTA hurt in measurement (clean 1.000→0.830), and far-zone gains are small (+0.04) — reported as-is, not inflated.
 
 ## How to run
 
 ```bash
-# 1) Download the data — NEU-CLS (~26MB, CC BY 4.0, Figshare)
+# 0) data (~26MB) and environment
 curl -sL -o NEU-CLS.zip "https://ndownloader.figshare.com/files/54094775"
 unzip -q NEU-CLS.zip -d data
+python3 -m venv venv && source venv/bin/activate && pip install -r requirements.txt
 
-# 2) Set up the environment
-python3 -m venv venv && source venv/bin/activate
-pip install -r requirements.txt
+# Act 1 — foundation and audits
+python prepare_data.py            # re-split + splits/ manifests
+python train.py                   # v1 training → best_model.pth (backup: best_model_v1.pth)
+python analyze.py
+python audit_data.py
+python audit_neardup.py
+python baseline_handcrafted.py
+python -m pytest tests/ -q
 
-# 3) Run the pipeline
-python prepare_data.py    # data/ → dataset/, stratified re-split (train/val/test)
-python train.py           # training → produces best_model.pth
-python analyze.py         # confusion matrix + per-class report
-python robustness.py      # robustness test → robustness.png
-python audit_data.py      # data audit (split leakage · problem framing · multi-defect figure)
-python audit_neardup.py   # near-duplicate audit + re-scoring without flagged images
-python -m pytest tests/ -q  # regression tests (split leakage · no-op degradation)
+# Act 2 — bench and explanation
+python bench_robust.py --model best_model_v1.pth --split test --name v1
+python gradcam.py && python cam_metrics.py && python cam_baselines.py
+
+# Act 3 — retraining and verdict
+for s in 42 43 44 45 46; do python train_robust.py --seed $s; done
+python compare_robust.py
+
+# Act 4 — multi-label and detection
+python train_multilabel.py && python eval_multilabel.py
+python anchor_recall.py
+python detect_train.py --sanity
+python detect_train.py --epochs 10          # CPU, tens of minutes
+python detect_eval.py --split val           # choose the operating point
+python detect_eval.py --split test --threshold 0.45
+python detect_visualize.py --threshold 0.45
 ```
 
-> Data source: NEU surface defect database (Northeastern University). If the curl link above is blocked, search Figshare for "NEU-CLS" — as noted above it is distributed under that name but ships detection annotations.
-> Training involves randomness (GPU arithmetic is non-deterministic even with a fixed seed), so numbers may differ slightly on retraining.
+> Data: NEU surface defect database (Northeastern University, Song & Yan). Distributed on Figshare as `NEU-CLS` but ships detection annotations (NEU-DET-style). CC BY 4.0 as declared by the redistributor.
+> GPU arithmetic is non-deterministic even when seeded; retrained numbers may differ slightly. The answer key for v1 numbers is the local `best_model_v1.pth`.
 
 ## Project structure
 
 ```
-common.py         # shared parts — class list · model skeleton · result store · Wilson interval
-prepare_data.py   # NEU source → classification folder layout + stratified 3-way split (+ splits/ manifests)
-train.py          # ResNet18 transfer learning (MPS)
-analyze.py        # confusion matrix · per-class precision/recall
-robustness.py     # robustness measurement under 5 image degradations
-audit_data.py     # split-leakage & problem-framing audit (reproduces the Limitations figures)
-audit_neardup.py  # near-duplicate audit — what md5 cannot catch + subset re-scoring
-tests/            # regression tests — the bugs we caught (split leakage · no-op degradation) stay caught
-splits/           # split manifests (path+md5) — the evidence of which file went where
-results/          # single JSON source of every reported number
-figures/          # result figures (near-duplicate gallery · multi-defect examples)
-confusion_matrix.png / robustness.png   # v1 result figures
-best_model_v1.pth # (local only, not tracked) v1 weight backup — the only baseline that reproduces v1 numbers
+common.py / labels.py        # shared parts (constants·model·results·stats / box labels)
+prepare_data.py              # re-split + splits/ manifests
+train.py → analyze.py        # v1 train/score (the v1 answer key — do not modify)
+robustness.py                # v1's five degradations (preserved)
+audit_data.py / audit_neardup.py / baseline_handcrafted.py     # Act 1
+corruptions.py / bench_robust.py                                # Act 2 bench
+gradcam.py / cam_metrics.py / cam_baselines.py                  # Act 2 explanation
+train_robust.py / compare_robust.py                             # Act 3
+train_multilabel.py / eval_multilabel.py                        # Act 4 multi-label
+detect_dataset.py / detect_train.py / detect_eval.py
+detect_visualize.py / anchor_recall.py                          # Act 4 detection
+tests/                       # regression tests (leakage · no-op · parsing)
+splits/  results/  figures/  runs/  docs/                       # the evidence
+best_model_v1.pth            # (local only) v1 baseline — never overwrite
 ```
 
 ## Limitations
 
-- The data comes from a single source (NEU) of clean lab captures, which differs from a real industrial distribution
-- The robustness test uses **artificial degradation simulation** and applies **one condition at a time**; a real line is a **compound condition** — dim *and* out of focus at once — so validation on real field data is still required
-- **File-level leakage was ruled out by an md5 check over every image** — **zero** identical files between train and test (the single train↔val pair is a duplicate present in the source dataset itself). The near-duplicate possibility was then measured too (`audit_neardup.py`): cosine similarity over 32×32 grayscale thumbnails flags 54 test images with a train neighbour at r>0.90, but visual inspection of the gallery shows these are **similar-looking but distinct plates**, not re-shots of the same one. Excluding all 54 — the most conservative cut — the remaining 216 images still score 1.000 (Wilson 95% [0.983, 1.000]), so this factor did not inflate the score
-- **The problem I posed did not match the structure of the data.** That every one of the 1,800 images ships a bounding-box file (4,189 boxes) means the original authors assumed an image can hold several defects of several kinds. And it does: **123 images (6.8%) carry a defect box of a class other than the one in their filename** — 188 foreign boxes, 4.5% of all boxes. The spread across classes is wide: `scratches` **16.7%**, `pitted_surface` 13.0%, `patches` 9.7%, against **0%** for `inclusion` and `rolled-in_scale`. In the test split, **23 of 270 images (8.5%) hold two or more defect types yet were graded against a single label.** The data was not wrong — **I was the one who flattened a detection dataset into single-label classification.** The 100% carries that looseness of framing as much as an easy dataset. The task needs restating as multi-label classification, or as detection (figures reproducible with `audit_data.py`)
-- There is no "normal / defect-free" class, so any image is forced into one of the 6 defect types. Real inspection-line deployment requires adding a normal class or an anomaly-detection stage first
+- Single-source lab captures — the real field distribution is unknown; degradations are simulated and applied one at a time (no compound conditions)
+- No "normal / defect-free" class, so every image is forced into one of 6 defect types
+- The similar-frame concern is mitigated by measurement, not eliminated — a similarity-graph group split is a v3 candidate
+- Detection is a minimal CPU-budget configuration (10 epochs); read its numbers as results of that budget
+
+What was deliberately not done and why (YOLO licensing, serving, MLOps tooling, TTA): [docs/05-decisions.md](docs/05-decisions.md)

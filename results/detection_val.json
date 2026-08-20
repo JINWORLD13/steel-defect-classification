@@ -1,0 +1,101 @@
+{
+  "sweep": [
+    {
+      "threshold": 0.05,
+      "miss": 0.1131,
+      "false_alarms_per_image": 7.415
+    },
+    {
+      "threshold": 0.1,
+      "miss": 0.1338,
+      "false_alarms_per_image": 5.233
+    },
+    {
+      "threshold": 0.15,
+      "miss": 0.1449,
+      "false_alarms_per_image": 4.052
+    },
+    {
+      "threshold": 0.2,
+      "miss": 0.1576,
+      "false_alarms_per_image": 3.422
+    },
+    {
+      "threshold": 0.25,
+      "miss": 0.1624,
+      "false_alarms_per_image": 2.978
+    },
+    {
+      "threshold": 0.3,
+      "miss": 0.172,
+      "false_alarms_per_image": 2.585
+    },
+    {
+      "threshold": 0.35,
+      "miss": 0.1783,
+      "false_alarms_per_image": 2.204
+    },
+    {
+      "threshold": 0.4,
+      "miss": 0.1815,
+      "false_alarms_per_image": 1.959
+    },
+    {
+      "threshold": 0.45,
+      "miss": 0.1879,
+      "false_alarms_per_image": 1.726
+    },
+    {
+      "threshold": 0.5,
+      "miss": 0.2006,
+      "false_alarms_per_image": 1.544
+    },
+    {
+      "threshold": 0.55,
+      "miss": 0.2102,
+      "false_alarms_per_image": 1.385
+    },
+    {
+      "threshold": 0.6,
+      "miss": 0.2293,
+      "false_alarms_per_image": 1.196
+    },
+    {
+      "threshold": 0.65,
+      "miss": 0.2373,
+      "false_alarms_per_image": 1.052
+    },
+    {
+      "threshold": 0.7,
+      "miss": 0.25,
+      "false_alarms_per_image": 0.904
+    },
+    {
+      "threshold": 0.75,
+      "miss": 0.2596,
+      "false_alarms_per_image": 0.767
+    },
+    {
+      "threshold": 0.8,
+      "miss": 0.2707,
+      "false_alarms_per_image": 0.648
+    },
+    {
+      "threshold": 0.85,
+      "miss": 0.2946,
+      "false_alarms_per_image": 0.485
+    },
+    {
+      "threshold": 0.9,
+      "miss": 0.3328,
+      "false_alarms_per_image": 0.33
+    },
+    {
+      "threshold": 0.95,
+      "miss": 0.4363,
+      "false_alarms_per_image": 0.17
+    }
+  ],
+  "picked": null,
+  "map50": 0.7414
+}
